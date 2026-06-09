@@ -23,18 +23,15 @@ export function useAiSummary(todos: TodoItem[], stocks: StockItem[]) {
     const nvda = stocks.find((s) => s.symbol === "NVDA")?.change || 3.2;
 
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("snuze_auth_token") || "" : "";
       const res = await fetch("/api/gemini/summarize", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          "x-snuze-token": token
         },
         body: JSON.stringify({ active, highPriority, nvda }),
       });
 
       if (res.status === 401) {
-        localStorage.removeItem("snuze_auth_token");
         window.location.reload();
         return;
       }

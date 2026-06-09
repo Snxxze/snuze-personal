@@ -15,17 +15,14 @@ export const DEFAULT_NOTES: NoteItem[] = [
 // ฟังก์ชันซิงค์ข้อมูลขึ้น Google Sheets
 async function syncNotesToSheets(notes: NoteItem[]) {
   try {
-    const token = typeof window !== "undefined" ? localStorage.getItem("snuze_auth_token") || "" : "";
     const res = await fetch("/api/sheets", {
       method: "POST",
       headers: { 
         "Content-Type": "application/json",
-        "x-snuze-token": token
       },
       body: JSON.stringify({ notes }),
     });
     if (res.status === 401) {
-      localStorage.removeItem("snuze_auth_token");
       window.location.reload();
     }
   } catch (error) {
@@ -46,14 +43,8 @@ export function useNotes() {
     // ซิงค์อัปเดตข้อมูล
     const fetchLatest = async () => {
       try {
-        const token = typeof window !== "undefined" ? localStorage.getItem("snuze_auth_token") || "" : "";
-        const res = await fetch("/api/sheets", {
-          headers: {
-            "x-snuze-token": token
-          }
-        });
+        const res = await fetch("/api/sheets");
         if (res.status === 401) {
-          localStorage.removeItem("snuze_auth_token");
           window.location.reload();
           return;
         }

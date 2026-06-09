@@ -43,17 +43,14 @@ export default function QuickCapture({ onAddTodo, onAddNote }: QuickCaptureProps
 
       if (useAi) {
         try {
-          const token = typeof window !== "undefined" ? localStorage.getItem("snuze_auth_token") || "" : "";
           const res = await fetch("/api/gemini/parse", {
             method: "POST",
             headers: { 
               "Content-Type": "application/json",
-              "x-snuze-token": token
             },
             body: JSON.stringify({ text }),
           });
           if (res.status === 401) {
-            localStorage.removeItem("snuze_auth_token");
             window.location.reload();
             return;
           }

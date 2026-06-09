@@ -33,17 +33,14 @@ export const DEFAULT_TODOS: TodoItem[] = [
 
 async function syncTodosToSheets(todos: TodoItem[]) {
   try {
-    const token = typeof window !== "undefined" ? localStorage.getItem("snuze_auth_token") || "" : "";
     const res = await fetch("/api/sheets", {
       method: "POST",
       headers: { 
         "Content-Type": "application/json",
-        "x-snuze-token": token
       },
       body: JSON.stringify({ todos }),
     });
     if (res.status === 401) {
-      localStorage.removeItem("snuze_auth_token");
       window.location.reload();
     }
   } catch (error) {
@@ -63,14 +60,8 @@ export function useTodos() {
 
     const fetchLatest = async () => {
       try {
-        const token = typeof window !== "undefined" ? localStorage.getItem("snuze_auth_token") || "" : "";
-        const res = await fetch("/api/sheets", {
-          headers: {
-            "x-snuze-token": token
-          }
-        });
+        const res = await fetch("/api/sheets");
         if (res.status === 401) {
-          localStorage.removeItem("snuze_auth_token");
           window.location.reload();
           return;
         }

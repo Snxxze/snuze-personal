@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { cookies } from "next/headers";
 
 export async function POST(request: Request) {
   try {
     const isPasswordEnabled = !!process.env.SNUZE_PASSWORD;
     if (isPasswordEnabled) {
-      const token = request.headers.get("x-snuze-token");
+      const cookieStore = await cookies();
+      const token = cookieStore.get("snuze_session")?.value;
       const expectedToken = process.env.SNUZE_API_SECRET || process.env.SNUZE_PASSWORD;
       if (!token || token !== expectedToken) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

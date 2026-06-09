@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { google } from "googleapis";
+import { cookies } from "next/headers";
 
 function getSheetsClient() {
   const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
@@ -64,7 +65,8 @@ async function ensureSheetsExist(sheets: any, spreadsheetId: string) {
 export async function GET(request: Request) {
   const isPasswordEnabled = !!process.env.SNUZE_PASSWORD;
   if (isPasswordEnabled) {
-    const token = request.headers.get("x-snuze-token");
+    const cookieStore = await cookies();
+    const token = cookieStore.get("snuze_session")?.value;
     const expectedToken = process.env.SNUZE_API_SECRET || process.env.SNUZE_PASSWORD;
     if (!token || token !== expectedToken) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -165,7 +167,8 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const isPasswordEnabled = !!process.env.SNUZE_PASSWORD;
   if (isPasswordEnabled) {
-    const token = request.headers.get("x-snuze-token");
+    const cookieStore = await cookies();
+    const token = cookieStore.get("snuze_session")?.value;
     const expectedToken = process.env.SNUZE_API_SECRET || process.env.SNUZE_PASSWORD;
     if (!token || token !== expectedToken) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

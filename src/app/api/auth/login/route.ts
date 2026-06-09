@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 export async function POST(request: Request) {
   try {
@@ -14,7 +15,17 @@ export async function POST(request: Request) {
 
     if (password === correctPassword) {
       const token = process.env.SNUZE_API_SECRET || correctPassword;
-      return NextResponse.json({ token });
+      
+      const cookieStore = await cookies();
+      cookieStore.set("snuze_session", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 60 * 60 * 24, // 24 hours (1 day)
+        path: "/",
+      });
+
+      return NextResponse.json({ success: true });
     }
 
     return NextResponse.json({ error: "Incorrect password" }, { status: 401 });
