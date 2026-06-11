@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { cookies } from "next/headers";
+import { safeCompare, getExpectedSessionToken } from "@/lib/sheets-sanitize";
 
 export async function POST(request: Request) {
   try {
@@ -8,8 +9,8 @@ export async function POST(request: Request) {
     if (isPasswordEnabled) {
       const cookieStore = await cookies();
       const token = cookieStore.get("snuze_session")?.value;
-      const expectedToken = process.env.SNUZE_API_SECRET || process.env.SNUZE_PASSWORD;
-      if (!token || token !== expectedToken) {
+      const expectedToken = getExpectedSessionToken();
+      if (!token || !safeCompare(token, expectedToken)) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
     }
@@ -40,24 +41,26 @@ export async function POST(request: Request) {
     if (text) {
       const sanitizedText = text.replace(/["\\\n\r]/g, " ").trim().substring(0, 3000);
       prompt = `คุณคือ AI สรุปข่าวสารอัจฉริยะของแอป Snuze (สไตล์ Neutral Modern Zen น้ำเสียงสงบ สุภาพ กะทัดรัด มีสติ)
-กรุณาสรุปบทความข่าวภาษาอังกฤษ/ไทยต่อไปนี้ให้เป็นภาษาไทยสั้นๆ 1-2 ประโยคกระชับที่สุดและตรงประเด็น:
-"${sanitizedText}"`;
+      กรุณาสรุปบทความข่าวภาษาอังกฤษ/ไทยต่อไปนี้ให้เป็นภาษาไทยสั้นๆ 1-2 ประโยคกระชับที่สุดและตรงประเด็น:
+      "${sanitizedText}"`;
     } else {
       prompt = `คุณคือระบบวิเคราะห์สรุปความเคลื่อนไหวประจำวันอัจฉริยะของแอป Snuze (สไตล์ Neutral Modern Zen น้ำเสียงอบอุ่น สงบ สุภาพ ให้กำลังใจและพลังบวก)
-กรุณาเขียนสรุปทักทายตอนเช้าภาษาไทยสั้นๆ 2-3 บรรทัด โดยสรุปจากข้อมูลเหล่านี้ในโทนชีวิตที่มีระเบียบและผ่อนคลาย:
-- มีรายการงานที่ต้องทำทั้งหมดวันนี้ที่ยังไม่เสร็จ: ${Number(active) || 0} งาน
-- ในนั้นเป็นงานที่ด่วน/สำคัญมาก: ${Number(highPriority) || 0} งาน
-- การเคลื่อนไหวของหุ้นตัวหลัก NVDA วันนี้: ${nvda ? Number(nvda).toFixed(1) : "+3.2"}%
-หลีกเลี่ยงการใช้เครื่องหมายคำพูดเยอะๆ หรือประโยคที่ซับซ้อนเกินไป ให้เรียงร้อยเนื้อหาออกมาแบบเป็นธรรมชาติติดต่อกัน`;
+      กรุณาเขียนสรุปทักทายตอนเช้าภาษาไทยสั้นๆ 2-3 บรรทัด โดยสรุปจากข้อมูลเหล่านี้ในโทนชีวิตที่มีระเบียบและผ่อนคลาย:
+      - มีรายการงานที่ต้องทำทั้งหมดวันนี้ที่ยังไม่เสร็จ: ${Number(active) || 0} งาน
+      - ในนั้นเป็นงานที่ด่วน/สำคัญมาก: ${Number(highPriority) || 0} งาน
+      - การเคลื่อนไหวของหุ้นตัวหลัก NVDA วันนี้: ${nvda ? Number(nvda).toFixed(1) : "+3.2"}%
+      หลีกเลี่ยงการใช้เครื่องหมายคำพูดเยอะๆ หรือประโยคที่ซับซ้อนเกินไป ให้เรียงร้อยเนื้อหาออกมาแบบเป็นธรรมชาติติดต่อกัน`;
     }
 
     const result = await model.generateContent(prompt);
     const responseText = result.response.text().trim();
 
     return NextResponse.json({ summary: responseText, isMock: false });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Gemini summarize API error:", error);
-    const isRateLimit = error.status === 429 || error.message?.includes("429") || error.message?.includes("Quota exceeded");
+    const errorStatus = error && typeof error === "object" && "status" in error ? (error as { status?: number }).status : undefined;
+    const errorMessage = error instanceof Error ? error.message : "";
+    const isRateLimit = errorStatus === 429 || errorMessage.includes("429") || errorMessage.includes("Quota exceeded");
     return NextResponse.json(
       { 
         error: isRateLimit ? "rate_limit_exceeded" : "internal_server_error", 
