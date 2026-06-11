@@ -34,7 +34,7 @@ export async function GET() {
           symbol: row[0] || "",
           name: row[1] || "",
           price: parseFloat(row[2]) || 0,
-          changePct: parseFloat(row[3]) || 0,
+          changePct: (parseFloat(row[3]) || 0) * 100,
           shares: parseFloat(row[4]) || 0,
           avgCost: parseFloat(row[5]) || 0,
         }));
