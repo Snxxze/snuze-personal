@@ -15,9 +15,13 @@ export function getSheetsClient(): SheetsClientInfo | null {
   }
 
   try {
+    const formattedKey = privateKey
+      .replace(/\\n/g, "\n")   
+      .replace(/^["']|["']$/g, "");
+
     const auth = new google.auth.JWT({
       email,
-      key: privateKey.replace(/\\n/g, "\n"),
+      key: formattedKey,
       scopes: ["https://www.googleapis.com/auth/spreadsheets"],
     });
     return {
