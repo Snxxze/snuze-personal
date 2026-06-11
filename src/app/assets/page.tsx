@@ -3,20 +3,20 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TrendingUp, Newspaper } from "lucide-react";
-import { useStocks } from "@/hooks/useStocks";
-
+import { useData } from "@/providers/DataProvider";
 import { MOCK_NEWS } from "@/lib/mock-data";
 
 import { PageHeader } from "@/components/ui/page-header";
 import { SegmentedControl } from "@/components/ui/segmented-control";
+import SyncStatusBanner from "@/components/ui/SyncStatusBanner";
 
-import StockWatchlist from "@/components/StockWatchlist";
+import StockWatchlist from "@/components/stocks";
 import NewsFeed from "@/components/NewsFeed";
 
 type ActiveTab = "market" | "news";
 
 export default function AssetsPage() {
-  const { stocks, addStock, deleteStock } = useStocks();
+  const { stocks, addStock, deleteStock, stocksError, refetchStocks } = useData();
   const [activeTab, setActiveTab] = useState<ActiveTab>("market");
 
   const segmentOptions = [
@@ -60,6 +60,9 @@ export default function AssetsPage() {
       </div>
 
       <div className="flex-1 overflow-y-auto pb-20">
+        {activeTab === "market" && (
+          <SyncStatusBanner error={stocksError} onRetry={refetchStocks} />
+        )}
         <AnimatePresence mode="wait">
           {activeTab === "market" ? (
             <motion.div

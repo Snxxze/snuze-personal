@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, ClipboardList, CheckCheck, History } from "lucide-react";
 import Link from "next/link";
-import { useTodos } from "@/hooks/useTodos";
+import { useData } from "@/providers/DataProvider";
 import { sortTodos } from "@/lib/todo-sort";
 
 import { PageHeader } from "@/components/ui/page-header";
@@ -14,9 +14,10 @@ import { Button } from "@/components/ui/button";
 
 import { TodoItem } from "@/components/todo/todo-item";
 import { CreateTodoDrawer } from "@/components/todo/create-todo-drawer";
+import SyncStatusBanner from "@/components/ui/SyncStatusBanner";
 
 export default function TodoPage() {
-  const { todos, isLoading, addTodo, toggleTodo, deleteTodo } = useTodos();
+  const { todos, addTodo, toggleTodo, deleteTodo, todosError, refetchTodos } = useData();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const completedTodos = todos.filter((t) => t.completed);
@@ -65,6 +66,7 @@ export default function TodoPage() {
       )}
 
       <div className="flex-1 overflow-y-auto space-y-2.5">
+        <SyncStatusBanner error={todosError} onRetry={refetchTodos} />
         {sortedTodos.length === 0 ? (
           <EmptyState
             icon={<ClipboardList className="w-6 h-6" />}

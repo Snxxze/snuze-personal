@@ -14,6 +14,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+import { DataProvider } from "@/providers/DataProvider";
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [token, setToken] = useState<string | null>(null);
@@ -98,11 +100,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={{ isAuthenticated, token, login, logout }}>
-      <Header />
-      <main className="flex-1 px-5 pt-5 relative flex flex-col min-h-0 overflow-hidden">
-        {children}
-      </main>
-      <BottomNav />
+      <DataProvider>
+        <Header />
+        <main className="flex-1 px-5 pt-5 relative flex flex-col min-h-0 overflow-hidden">
+          {children}
+        </main>
+        <BottomNav />
+      </DataProvider>
     </AuthContext.Provider>
   );
 }

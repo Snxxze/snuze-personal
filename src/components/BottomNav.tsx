@@ -50,26 +50,19 @@ export default function BottomNav() {
                 group cursor-pointer
               "
             >
-              {isActive && (
-                <motion.div
-                  layoutId="activeTab"
-                  className="absolute inset-0 bg-zen-indigo/10 rounded-xl"
-                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                />
-              )}
-
               <motion.div
                 whileTap={{ scale: 0.9 }}
-                className={`z-10 transition-colors duration-200 ${
-                  isActive ? "text-zen-indigo" : "text-zen-slate group-hover:text-zen-charcoal"
-                }`}
+                className={`z-10 transition-colors duration-200 ${isActive ? "text-zen-indigo" : "text-zen-slate group-hover:text-zen-charcoal"
+                  }`}
               >
                 <Icon className="w-5 h-5" />
               </motion.div>
 
               <span
-                className={`text-[10px] mt-1 font-medium tracking-wide z-10 transition-colors duration-200 ${
-                  isActive ? "text-zen-indigo" : "text-zen-slate group-hover:text-zen-charcoal"
+                className={`text-[10px] mt-1 tracking-wide z-10 transition-all duration-200 ${
+                  isActive 
+                    ? "font-semibold text-zen-indigo" 
+                    : "font-medium text-zen-slate group-hover:text-zen-charcoal"
                 }`}
               >
                 {item.label}

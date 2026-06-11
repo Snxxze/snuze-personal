@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, FileText } from "lucide-react";
-import { useNotes } from "@/hooks/useNotes";
+import { useData } from "@/providers/DataProvider";
 
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -13,9 +13,10 @@ import { Button } from "@/components/ui/button";
 
 import { NoteItem } from "@/components/notes/note-item";
 import { CreateNoteDrawer } from "@/components/notes/create-note-drawer";
+import SyncStatusBanner from "@/components/ui/SyncStatusBanner";
 
 export default function NotesPage() {
-  const { notes, isLoading, addNote, deleteNote } = useNotes();
+  const { notes, addNote, deleteNote, notesError, refetchNotes } = useData();
   const [searchQuery, setSearchQuery] = useState("");
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
@@ -49,6 +50,7 @@ export default function NotesPage() {
       </div>
 
       <div className="flex-1 overflow-y-auto space-y-2.5">
+        <SyncStatusBanner error={notesError} onRetry={refetchNotes} />
         {filteredNotes.length === 0 ? (
           <EmptyState
             icon={<FileText className="w-6 h-6" />}

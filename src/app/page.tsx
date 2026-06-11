@@ -7,9 +7,7 @@ import { Sparkles, ClipboardList, TrendingUp, RefreshCw, ArrowRight } from "luci
 
 import QuickCapture from "@/components/QuickCapture";
 
-import { useTodos } from "@/hooks/useTodos";
-import { useNotes } from "@/hooks/useNotes";
-import { useStocks } from "@/hooks/useStocks";
+import { useData } from "@/providers/DataProvider";
 import { useAiSummary } from "@/hooks/useAiSummary";
 import { sortTodos } from "@/lib/todo-sort";
 
@@ -67,15 +65,13 @@ function StatCard({ href, icon, label, value, accent = "indigo" }: StatCardProps
 }
 
 export default function HomePage() {
-  const { todos, addTodo, toggleTodo } = useTodos();
-  const { addNote } = useNotes();
-  const { stocks } = useStocks();
+  const { todos, addTodo, toggleTodo, addNote, stocks } = useData();
   const { aiSummary, isSummarizing, generateSummary } = useAiSummary(todos, stocks);
 
   const pendingTodos = todos.filter((todo) => !todo.completed);
   const displayTodos = sortTodos(pendingTodos);
   const nvdaStock = stocks.find((stock) => stock.symbol === "NVDA");
-  const isPositiveNvda = (nvdaStock?.change ?? 3.2) >= 0;
+  const isPositiveNvda = (nvdaStock?.changePct ?? 3.2) >= 0;
 
   return (
     <motion.div
@@ -149,7 +145,7 @@ export default function HomePage() {
           <StatCard
             href="/assets"
             label="ตลาดวันนี้"
-            value={`NVDA ${isPositiveNvda ? "+" : ""}${(nvdaStock?.change ?? 3.2).toFixed(1)}%`}
+            value={`NVDA ${isPositiveNvda ? "+" : ""}${(nvdaStock?.changePct ?? 3.2).toFixed(1)}%`}
             icon={<TrendingUp className="w-4 h-4" />}
             accent="pine"
           />

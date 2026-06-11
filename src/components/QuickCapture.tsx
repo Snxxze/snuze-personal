@@ -104,7 +104,7 @@ export default function QuickCapture({ onAddTodo, onAddNote }: QuickCaptureProps
       lower.startsWith("งาน:");
 
     if (isTodo) {
-      let title = text.replace(/^(todo:|งาน:)\s*/i, "");
+      const title = text.replace(/^(todo:|งาน:)\s*/i, "");
       let priority: "high" | "medium" | "low" = "medium";
 
       if (lower.includes("ด่วน") || lower.includes("สำคัญมาก") || lower.includes("urgent") || lower.includes("high")) {

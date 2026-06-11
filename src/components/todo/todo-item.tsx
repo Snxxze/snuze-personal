@@ -32,15 +32,16 @@ export function TodoItem({ todo, onToggle, onDelete }: TodoItemProps) {
       <button
         onClick={() => onToggle(todo.id)}
         className={`
-          w-5 h-5 flex items-center justify-center 
-          rounded border cursor-pointer transition-all duration-150
+          w-6 h-6 flex items-center justify-center 
+          rounded border cursor-pointer transition-all duration-150 relative
+          before:content-[''] before:absolute before:-inset-2 before:block
           ${todo.completed 
             ? "bg-zen-pine border-zen-pine text-zen-white" 
             : "border-zen-pebble hover:border-zen-indigo"
           }
         `}
       >
-        {todo.completed && <Check className="w-3.5 h-3.5" />}
+        {todo.completed && <Check className="w-4 h-4" />}
       </button>
 
       <div className="flex-1 min-w-0">

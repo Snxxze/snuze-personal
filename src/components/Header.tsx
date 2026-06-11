@@ -14,7 +14,7 @@ export default function Header() {
       month: "short",
       day: "numeric",
     });
-    setDateString(formattedDate);
+    Promise.resolve().then(() => setDateString(formattedDate));
   }, []);
 
   return (
