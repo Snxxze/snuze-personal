@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { safeCompare, getExpectedSessionToken } from "@/lib/sheets-sanitize";
 
 export async function GET() {
   const isRequired = !!process.env.SNUZE_PASSWORD;
@@ -9,9 +10,9 @@ export async function GET() {
 
   const cookieStore = await cookies();
   const token = cookieStore.get("snuze_session")?.value;
-  const expectedToken = process.env.SNUZE_API_SECRET || process.env.SNUZE_PASSWORD;
+  const expectedToken = getExpectedSessionToken();
 
-  const isAuthenticated = !!token && token === expectedToken;
+  const isAuthenticated = !!token && safeCompare(token, expectedToken);
 
   return NextResponse.json({
     required: true,

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { getExpectedSessionToken } from "@/lib/sheets-sanitize";
 
 export async function POST(request: Request) {
   try {
@@ -14,7 +15,7 @@ export async function POST(request: Request) {
     }
 
     if (password === correctPassword) {
-      const token = process.env.SNUZE_API_SECRET || correctPassword;
+      const token = getExpectedSessionToken();
       
       const cookieStore = await cookies();
       cookieStore.set("snuze_session", token, {
@@ -29,8 +30,10 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ error: "Incorrect password" }, { status: 401 });
+
   } catch (error) {
     console.error("Auth login API error:", error);
+
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
