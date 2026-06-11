@@ -17,15 +17,9 @@ export default function TodoHistoryPage() {
   useEffect(() => {
     async function fetchHistory() {
       try {
-        const token = typeof window !== "undefined" ? localStorage.getItem("snuze_auth_token") || "" : "";
-        const res = await fetch("/api/sheets?history=true", {
-          headers: {
-            "x-snuze-token": token,
-          },
-        });
+        const res = await fetch("/api/sheets?history=true");
 
         if (res.status === 401) {
-          localStorage.removeItem("snuze_auth_token");
           window.location.reload();
           return;
         }

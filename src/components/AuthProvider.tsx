@@ -14,6 +14,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+import { DataProvider } from "@/providers/DataProvider";
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [token, setToken] = useState<string | null>(null);
@@ -29,16 +31,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setIsPasswordRequired(data.required);
 
           if (data.required) {
-            const storedToken = localStorage.getItem("snuze_auth_token");
-            if (storedToken) {
-              setToken(storedToken);
+            if (data.authenticated) {
+              setToken("session");
               setIsAuthenticated(true);
             } else {
+              setToken(null);
               setIsAuthenticated(false);
             }
           } else {
             setIsAuthenticated(true);
-            setToken(null);
+            setToken("session");
           }
         }
       } catch (err) {
@@ -61,9 +63,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (res.ok) {
         const data = await res.json();
-        if (data.token) {
-          localStorage.setItem("snuze_auth_token", data.token);
-          setToken(data.token);
+        if (data.success) {
+          setToken("session");
           setIsAuthenticated(true);
           return true;
         }
@@ -75,8 +76,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem("snuze_auth_token");
+  const logout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch (err) {
+      console.error("Logout request failed:", err);
+    }
     setToken(null);
     setIsAuthenticated(false);
   };
@@ -95,11 +100,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={{ isAuthenticated, token, login, logout }}>
-      <Header />
-      <main className="flex-1 px-5 pt-5 relative flex flex-col min-h-0 overflow-hidden">
-        {children}
-      </main>
-      <BottomNav />
+      <DataProvider>
+        <Header />
+        <main className="flex-1 px-5 pt-5 relative flex flex-col min-h-0 overflow-hidden">
+          {children}
+        </main>
+        <BottomNav />
+      </DataProvider>
     </AuthContext.Provider>
   );
 }

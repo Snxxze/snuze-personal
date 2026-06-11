@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import type { TodoItem } from "@/types";
+import { safeParse } from "@/lib/sheets-sanitize";
+import { apiFetch } from "@/lib/api";
 
 // Mock Data
 export const DEFAULT_TODOS: TodoItem[] = [
@@ -31,75 +33,73 @@ export const DEFAULT_TODOS: TodoItem[] = [
   },
 ];
 
-async function syncTodosToSheets(todos: TodoItem[]) {
+async function syncTodosToSheets(todos: TodoItem[], signal?: AbortSignal) {
   try {
-    const token = typeof window !== "undefined" ? localStorage.getItem("snuze_auth_token") || "" : "";
-    const res = await fetch("/api/sheets", {
+    await apiFetch("/api/sheets/todos", {
       method: "POST",
       headers: { 
         "Content-Type": "application/json",
-        "x-snuze-token": token
       },
       body: JSON.stringify({ todos }),
+      signal,
     });
-    if (res.status === 401) {
-      localStorage.removeItem("snuze_auth_token");
-      window.location.reload();
-    }
   } catch (error) {
     console.warn("Background todos sync failed:", error)
   }
 }
 
 export function useTodos() {
-  const [todos, setTodos] = useState<TodoItem[]>([]);
+  const [todos, setTodos] = useState<TodoItem[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("snuze_todos");
+      return safeParse<TodoItem[]>(saved, DEFAULT_TODOS);
+    }
+    return DEFAULT_TODOS;
+  });
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchLatest = async (signal?: AbortSignal) => {
+    try {
+      const res = await apiFetch("/api/sheets/todos", { signal });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.status === "success" && data.todos) {
+          setError(null);
+          setTodos(data.todos);
+          
+          const sevenDaysAgo = new Date();
+          sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+          const cachedTodos = data.todos.filter((t: TodoItem) => {
+            if (!t.completed) return true;
+            if (!t.completedAt) return true;
+            return new Date(t.completedAt) >= sevenDaysAgo;
+          });
+          localStorage.setItem("snuze_todos", JSON.stringify(cachedTodos));
+        }
+      } else {
+        setError("ไม่สามารถซิงค์ข้อมูลกับ Google Sheets ได้");
+      }
+    } catch (err) {
+      const errorName = err instanceof Error ? err.name : "";
+      if (errorName !== "AbortError") {
+        setError("เครือข่ายขัดข้อง — ไม่สามารถติดต่อเซิร์ฟเวอร์ได้");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const saved = localStorage.getItem("snuze_todos");
-    const initial = saved ? JSON.parse(saved) : DEFAULT_TODOS;
-    setTodos(initial);
-    setIsLoading(false);
+    const controller = new AbortController();
+    Promise.resolve().then(() => fetchLatest(controller.signal));
 
-    const fetchLatest = async () => {
-      try {
-        const token = typeof window !== "undefined" ? localStorage.getItem("snuze_auth_token") || "" : "";
-        const res = await fetch("/api/sheets", {
-          headers: {
-            "x-snuze-token": token
-          }
-        });
-        if (res.status === 401) {
-          localStorage.removeItem("snuze_auth_token");
-          window.location.reload();
-          return;
-        }
-        if (res.ok) {
-          const data = await res.json();
-          if (data.status === "success" && data.todos) {
-            setTodos(data.todos);
-            
-            // Limit local cache to active tasks + tasks completed within 7 days
-            const sevenDaysAgo = new Date();
-            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-            const cachedTodos = data.todos.filter((t: any) => {
-              if (!t.completed) return true;
-              if (!t.completedAt) return true;
-              return new Date(t.completedAt) >= sevenDaysAgo;
-            });
-            localStorage.setItem("snuze_todos", JSON.stringify(cachedTodos));
-          }
-        }
-      } catch (error) {
-        console.warn("Could not sync with Google Sheets on load:", error);
-      }
-    }
-
-    fetchLatest();
+    return () => {
+      controller.abort();
+    };
   }, []);
 
   const saveTodos = (newTodos: TodoItem[]) => {
-    // Limit local storage cache and API sync to active + completed within 7 days
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     
@@ -114,7 +114,6 @@ export function useTodos() {
     syncTodosToSheets(cachedTodos);
   };
 
-  // handler Create
   const addTodo = (task: { title: string; priority: "high" | "medium" | "low"; deadline?: string }) => {
     const newTodo: TodoItem = {
       id: crypto.randomUUID(),
@@ -127,7 +126,6 @@ export function useTodos() {
     saveTodos([newTodo, ...todos]);
   };
 
-  // handler Update
   const toggleTodo = (id: string) => {
     const updated = todos.map((t) => {
       if (t.id === id) {
@@ -143,11 +141,10 @@ export function useTodos() {
     saveTodos(updated);
   };
 
-  // handler Delete
   const deleteTodo = (id: string) => {
     const updated = todos.filter((t) => t.id !== id);
     saveTodos(updated);
   };
 
-  return { todos, isLoading, addTodo, toggleTodo, deleteTodo };
-}
+  return { todos, isLoading, error, addTodo, toggleTodo, deleteTodo, refetch: () => fetchLatest() };
+}

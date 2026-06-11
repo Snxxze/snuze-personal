@@ -29,18 +29,15 @@ export default function NewsFeed({ news }: NewsFeedProps) {
     setSummarizingId(id);
 
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("snuze_auth_token") || "" : "";
       const res = await fetch("/api/gemini/summarize", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          "x-snuze-token": token
         },
         body: JSON.stringify({ text: textToSummarize }),
       });
 
       if (res.status === 401) {
-        localStorage.removeItem("snuze_auth_token");
         window.location.reload();
         return;
       }

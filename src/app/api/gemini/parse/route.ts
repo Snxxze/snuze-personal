@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { cookies } from "next/headers";
+import { safeCompare, getExpectedSessionToken } from "@/lib/sheets-sanitize";
 
 export async function POST(request: Request) {
   try {
     const isPasswordEnabled = !!process.env.SNUZE_PASSWORD;
     if (isPasswordEnabled) {
-      const token = request.headers.get("x-snuze-token");
-      const expectedToken = process.env.SNUZE_API_SECRET || process.env.SNUZE_PASSWORD;
-      if (!token || token !== expectedToken) {
+      const cookieStore = await cookies();
+      const token = cookieStore.get("snuze_session")?.value;
+      const expectedToken = getExpectedSessionToken();
+      if (!token || !safeCompare(token, expectedToken)) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
     }
@@ -73,9 +76,11 @@ export async function POST(request: Request) {
     const parsedJson = JSON.parse(responseText);
     return NextResponse.json(parsedJson);
 
-  } catch (error: any) {
+  } catch (error) {
     console.error("Gemini parse API error:", error);
-    const isRateLimit = error.status === 429 || error.message?.includes("429") || error.message?.includes("Quota exceeded");
+    const errorStatus = error && typeof error === "object" && "status" in error ? (error as { status?: number }).status : undefined;
+    const errorMessage = error instanceof Error ? error.message : "";
+    const isRateLimit = errorStatus === 429 || errorMessage.includes("429") || errorMessage.includes("Quota exceeded");
     return NextResponse.json(
       { 
         error: isRateLimit ? "rate_limit_exceeded" : "internal_server_error", 

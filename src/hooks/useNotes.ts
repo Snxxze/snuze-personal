@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import type { NoteItem } from "@/types";
+import { safeParse } from "@/lib/sheets-sanitize";
+import { apiFetch } from "@/lib/api";
 
 // Mock Data
 export const DEFAULT_NOTES: NoteItem[] = [
@@ -12,75 +14,73 @@ export const DEFAULT_NOTES: NoteItem[] = [
   },
 ];
 
-// ฟังก์ชันซิงค์ข้อมูลขึ้น Google Sheets
-async function syncNotesToSheets(notes: NoteItem[]) {
+// Sync notes data to Google Sheets
+async function syncNotesToSheets(notes: NoteItem[], signal?: AbortSignal) {
   try {
-    const token = typeof window !== "undefined" ? localStorage.getItem("snuze_auth_token") || "" : "";
-    const res = await fetch("/api/sheets", {
+    await apiFetch("/api/sheets/notes", {
       method: "POST",
       headers: { 
         "Content-Type": "application/json",
-        "x-snuze-token": token
       },
       body: JSON.stringify({ notes }),
+      signal,
     });
-    if (res.status === 401) {
-      localStorage.removeItem("snuze_auth_token");
-      window.location.reload();
-    }
   } catch (error) {
     console.warn("Background notes sync failed:", error);
   }
 }
 
 export function useNotes() {
-  const [notes, setNotes] = useState<NoteItem[]>([]);
+  const [notes, setNotes] = useState<NoteItem[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("snuze_notes");
+      return safeParse<NoteItem[]>(saved, DEFAULT_NOTES);
+    }
+    return DEFAULT_NOTES;
+  });
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchLatest = async (signal?: AbortSignal) => {
+    try {
+      const res = await apiFetch("/api/sheets/notes", { signal });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.status === "success" && data.notes && data.notes.length > 0) {
+          setError(null);
+          setNotes(data.notes);
+          localStorage.setItem("snuze_notes", JSON.stringify(data.notes));
+        }
+      } else {
+        setError("ไม่สามารถซิงค์ข้อมูลกับ Google Sheets ได้");
+      }
+    } catch (err) {
+      const errorName = err instanceof Error ? err.name : "";
+      if (errorName !== "AbortError") {
+        setError("เครือข่ายขัดข้อง — ไม่สามารถติดต่อเซิร์ฟเวอร์ได้");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const saved = localStorage.getItem("snuze_notes");
-    const initial = saved ? JSON.parse(saved) : DEFAULT_NOTES;
-    setNotes(initial);
-    setIsLoading(false);
+    const controller = new AbortController();
+    Promise.resolve().then(() => fetchLatest(controller.signal));
 
-    // ซิงค์อัปเดตข้อมูล
-    const fetchLatest = async () => {
-      try {
-        const token = typeof window !== "undefined" ? localStorage.getItem("snuze_auth_token") || "" : "";
-        const res = await fetch("/api/sheets", {
-          headers: {
-            "x-snuze-token": token
-          }
-        });
-        if (res.status === 401) {
-          localStorage.removeItem("snuze_auth_token");
-          window.location.reload();
-          return;
-        }
-        if (res.ok) {
-          const data = await res.json();
+    return () => {
+      controller.abort();
+    };
+  }, []);
 
-          if (data.status === "success" && data.notes && data.notes.length > 0) {
-            setNotes(data.notes);
-            localStorage.setItem("snuze_notes", JSON.stringify(data.notes));
-          }
-        }
-      } catch (error) {
-        console.warn("Could not sync notes with Google Sheets on load:", error);
-      }
-    }
-
-    fetchLatest();
-  }, [])
-
-  // ฟังก์ชันตัวกลางบันทึกข้อมูลโน้ตและส่งซิงค์
+  // Save notes to state, localStorage, and trigger sync
   const saveNotes = (newNotes: NoteItem[]) => {
     setNotes(newNotes);
     localStorage.setItem("snuze_notes", JSON.stringify(newNotes));
     syncNotesToSheets(newNotes);
   };
 
-  // handler Create
+  // Create new note handler
   const addNote = (content: string) => {
     const newNote: NoteItem = {
       id: crypto.randomUUID(), 
@@ -90,11 +90,11 @@ export function useNotes() {
     saveNotes([newNote, ...notes]);
   };
   
-  // handler Delete
+  // Delete note handler
   const deleteNote = (id: string) => {
     const updated = notes.filter((n) => n.id !== id);
     saveNotes(updated);
   };
   
-  return { notes, isLoading, addNote, deleteNote };
+  return { notes, isLoading, error, addNote, deleteNote, refetch: () => fetchLatest() };
 }

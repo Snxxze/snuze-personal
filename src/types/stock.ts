@@ -2,6 +2,7 @@ export interface StockItem {
   symbol: string;
   name: string;
   price: number;
-  change: number;
-  changePercent?: number;
+  changePct: number;
+  shares?: number;
+  avgCost?: number;
 }
