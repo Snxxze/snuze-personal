@@ -13,12 +13,15 @@ import { FAB } from "@/components/ui/fab";
 import { Button } from "@/components/ui/button";
 
 import { TodoItem } from "@/components/todo/todo-item";
+import type { TodoItem as TodoItemType } from "@/types";
 import { CreateTodoDrawer } from "@/components/todo/create-todo-drawer";
+import { TodoDetailDrawer } from "@/components/todo/todo-detail-drawer";
 import SyncStatusBanner from "@/components/ui/SyncStatusBanner";
 
 export default function TodoPage() {
-  const { todos, addTodo, toggleTodo, deleteTodo, todosError, refetchTodos } = useData();
+  const { todos, addTodo, toggleTodo, updateTodo, deleteTodo, todosError, refetchTodos } = useData();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [selectedTodo, setSelectedTodo] = useState<TodoItemType | null>(null);
 
   const completedTodos = todos.filter((t) => t.completed);
   const sortedTodos = sortTodos(todos);
@@ -85,6 +88,7 @@ export default function TodoPage() {
                 key={todo.id}
                 todo={todo}
                 onToggle={toggleTodo}
+                onClick={() => setSelectedTodo(todo)}
                 onDelete={deleteTodo}
               />
             ))}
@@ -102,6 +106,13 @@ export default function TodoPage() {
         open={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
         onSubmit={addTodo}
+      />
+
+      <TodoDetailDrawer
+        open={selectedTodo !== null}
+        todo={selectedTodo}
+        onClose={() => setSelectedTodo(null)}
+        onSave={updateTodo}
       />
     </motion.div>
   );

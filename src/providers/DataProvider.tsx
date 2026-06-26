@@ -24,6 +24,7 @@ type DataContextType = {
   todosError: string | null;
   addTodo: ReturnType<typeof useTodos>["addTodo"];
   toggleTodo: ReturnType<typeof useTodos>["toggleTodo"];
+  updateTodo: ReturnType<typeof useTodos>["updateTodo"];
   deleteTodo: ReturnType<typeof useTodos>["deleteTodo"];
   refetchTodos: () => void;
 
@@ -32,6 +33,7 @@ type DataContextType = {
   isNotesLoading: boolean;
   notesError: string | null;
   addNote: ReturnType<typeof useNotes>["addNote"];
+  updateNote: ReturnType<typeof useNotes>["updateNote"];
   deleteNote: ReturnType<typeof useNotes>["deleteNote"];
   refetchNotes: () => void;
 };
@@ -40,8 +42,8 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
   const { stocks, isLoading: isStocksLoading, error: stocksError, addStock, deleteStock, refetch: refetchStocks } = useStocks();
-  const { todos, isLoading: isTodosLoading, error: todosError, addTodo, toggleTodo, deleteTodo, refetch: refetchTodos } = useTodos();
-  const { notes, isLoading: isNotesLoading, error: notesError, addNote, deleteNote, refetch: refetchNotes } = useNotes();
+  const { todos, isLoading: isTodosLoading, error: todosError, addTodo, toggleTodo, updateTodo, deleteTodo, refetch: refetchTodos } = useTodos();
+  const { notes, isLoading: isNotesLoading, error: notesError, addNote, updateNote, deleteNote, refetch: refetchNotes } = useNotes();
   const [usdToThb, setUsdToThb] = useState(DEFAULT_USD_TO_THB);
 
   useEffect(() => {
@@ -82,6 +84,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         todosError,
         addTodo,
         toggleTodo,
+        updateTodo,
         deleteTodo,
         refetchTodos,
 
@@ -89,6 +92,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         isNotesLoading,
         notesError,
         addNote,
+        updateNote,
         deleteNote,
         refetchNotes,
       }}

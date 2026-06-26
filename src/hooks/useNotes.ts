@@ -89,6 +89,12 @@ export function useNotes() {
     };
     saveNotes([newNote, ...notes]);
   };
+
+  // Update note handler
+  const updateNote = (id: string, content: string) => {
+    const updated = notes.map((n) => n.id === id ? { ...n, content, updatedAt: new Date().toISOString() } : n)
+    saveNotes(updated)
+  }
   
   // Delete note handler
   const deleteNote = (id: string) => {
@@ -96,5 +102,5 @@ export function useNotes() {
     saveNotes(updated);
   };
   
-  return { notes, isLoading, error, addNote, deleteNote, refetch: () => fetchLatest() };
+  return { notes, isLoading, error, addNote, updateNote, deleteNote, refetch: () => fetchLatest() };
 }

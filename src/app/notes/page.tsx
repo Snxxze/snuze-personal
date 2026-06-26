@@ -12,13 +12,16 @@ import { FAB } from "@/components/ui/fab";
 import { Button } from "@/components/ui/button";
 
 import { NoteItem } from "@/components/notes/note-item";
+import type { NoteItem as NoteItemType } from "@/types";
 import { CreateNoteDrawer } from "@/components/notes/create-note-drawer";
+import { NoteDetailDrawer } from "@/components/notes/note-detail-drawer";
 import SyncStatusBanner from "@/components/ui/SyncStatusBanner";
 
 export default function NotesPage() {
-  const { notes, addNote, deleteNote, notesError, refetchNotes } = useData();
+  const { notes, addNote, updateNote, deleteNote, notesError, refetchNotes } = useData();
   const [searchQuery, setSearchQuery] = useState("");
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [selectedNote, setSelectedNote] = useState<NoteItemType | null>(null);
 
   const filteredNotes = useMemo(() => {
     return notes.filter((note) =>
@@ -75,6 +78,7 @@ export default function NotesPage() {
                 <NoteItem
                   key={note.id}
                   note={note}
+                  onClick={() => setSelectedNote(note)}
                   onDelete={deleteNote}
                 />
               ))}
@@ -93,6 +97,13 @@ export default function NotesPage() {
         open={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
         onSubmit={addNote}
+      />
+
+      <NoteDetailDrawer
+        open={selectedNote !== null}
+        note={selectedNote}
+        onClose={() => setSelectedNote(null)}
+        onSave={updateNote}
       />
     </motion.div>
   );
