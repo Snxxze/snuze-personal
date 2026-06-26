@@ -8,10 +8,11 @@ import { Badge } from "@/components/ui/badge";
 interface TodoItemProps {
   todo: TodoItemType;
   onToggle: (id: string) => void;
+  onClick: () => void;
   onDelete: (id: string) => void;
 }
 
-export function TodoItem({ todo, onToggle, onDelete }: TodoItemProps) {
+export function TodoItem({ todo, onToggle, onClick, onDelete }: TodoItemProps) {
   const overdue = !todo.completed && isOverdue(todo.dueDate); // note: in types we defined it as dueDate, in our sorting it was dueDate too
   
   return (
@@ -21,16 +22,20 @@ export function TodoItem({ todo, onToggle, onDelete }: TodoItemProps) {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: -50 }}
+      onClick={onClick}
       className={`
         flex items-center justify-between gap-3
         p-4 rounded-xl border
         transition-all duration-150
-        bg-zen-white 
+        bg-zen-white cursor-pointer hover:bg-zen-sand/20
         ${todo.completed ? "border-zen-pebble/10 opacity-60" : "border-zen-pebble/30 shadow-sm"}
       `}
     >
       <button
-        onClick={() => onToggle(todo.id)}
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggle(todo.id);
+        }}
         className={`
           w-6 h-6 flex items-center justify-center 
           rounded border cursor-pointer transition-all duration-150 relative
@@ -75,7 +80,10 @@ export function TodoItem({ todo, onToggle, onDelete }: TodoItemProps) {
       </div>
 
       <button
-        onClick={() => onDelete(todo.id)}
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete(todo.id);
+        }}
         className="
           p-1.5 
           text-zen-slate/30 hover:text-zen-error hover:bg-red-50 

@@ -6,10 +6,11 @@ import { formatTimeAgo, getNotePreview } from "@/lib/format";
 
 interface NoteItemProps {
   note: NoteItemType;
+  onClick: () => void;
   onDelete: (id: string) => void;
 }
 
-export function NoteItem({ note, onDelete }: NoteItemProps) {
+export function NoteItem({ note, onClick, onDelete }: NoteItemProps) {
   const preview = getNotePreview(note.content);
   const lines = note.content.split("\n");
   const title = lines[0].trim() || "Untitled Note";
@@ -23,11 +24,12 @@ export function NoteItem({ note, onDelete }: NoteItemProps) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.2 }}
+      onClick={onClick}
       className="
         flex items-center justify-between 
         p-4 hover:bg-zen-sand/40 
         transition-colors duration-150
-        group
+        group cursor-pointer
       "
     >
       <div className="flex-1 min-w-0 pr-4">
@@ -46,7 +48,10 @@ export function NoteItem({ note, onDelete }: NoteItemProps) {
       </div>
 
       <button
-        onClick={() => onDelete(note.id)}
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete(note.id)
+        }}
         aria-label="Delete note"
         className="
           p-1.5 

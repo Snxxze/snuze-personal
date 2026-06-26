@@ -141,10 +141,19 @@ export function useTodos() {
     saveTodos(updated);
   };
 
+  const updateTodo = (id: string, updates: Partial<Omit<TodoItem, "id" | "createdAt">>) => {
+    const updated = todos.map((t) =>
+      t.id === id
+        ? { ...t, ...updates }
+        : t
+    );
+    saveTodos(updated);
+  };
+
   const deleteTodo = (id: string) => {
     const updated = todos.filter((t) => t.id !== id);
     saveTodos(updated);
   };
 
-  return { todos, isLoading, error, addTodo, toggleTodo, deleteTodo, refetch: () => fetchLatest() };
+  return { todos, isLoading, error, addTodo, toggleTodo, updateTodo, deleteTodo, refetch: () => fetchLatest() };
 }
