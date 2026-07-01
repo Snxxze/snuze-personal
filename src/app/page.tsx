@@ -1,9 +1,10 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 
-import { Sparkles, ClipboardList, TrendingUp, RefreshCw, ArrowRight, Sprout, Target, Lightbulb } from "lucide-react";
+import { Sparkles, ClipboardList, TrendingUp, RefreshCw, ArrowRight } from "lucide-react";
 
 import QuickCapture from "@/components/QuickCapture";
 
@@ -65,246 +66,26 @@ function StatCard({ href, icon, label, value, accent = "indigo" }: StatCardProps
   );
 }
 
-interface BriefSection {
-  type: "greeting" | "focus" | "finance" | "notes";
-  title: string;
-  emoji: string;
-  content: string;
-  items: string[];
-}
-
-function parseDailyBrief(text: string): BriefSection[] {
-  if (!text) return [];
-  
-  const sections: BriefSection[] = [];
-  const lines = text.split("\n");
-  
-  let currentSection: BriefSection | null = null;
-  
-  for (let line of lines) {
-    line = line.trim();
-    if (!line) continue;
-    
-    const isHeading = line.startsWith("🌱") || line.startsWith("🎯") || line.startsWith("📈") || line.startsWith("📊") || line.startsWith("💡");
-    
-    if (isHeading) {
-      if (currentSection) {
-        sections.push(currentSection);
-      }
-      
-      let type: BriefSection["type"] = "greeting";
-      let emoji = "";
-      if (line.includes("🌱")) {
-        type = "greeting";
-        emoji = "🌱";
-      } else if (line.includes("🎯")) {
-        type = "focus";
-        emoji = "🎯";
-      } else if (line.includes("📈") || line.includes("📊")) {
-        type = "finance";
-        emoji = "📈";
-      } else if (line.includes("💡")) {
-        type = "notes";
-        emoji = "💡";
-      }
-      
-      const title = line.replace(/[🌱🎯📈📊💡]/g, "").replace(/\*\*/g, "").trim();
-      
-      currentSection = {
-        type,
-        title,
-        emoji,
-        content: "",
-        items: []
-      };
-    } else {
-      if (currentSection) {
-        if (line.startsWith("- ")) {
-          currentSection.items.push(line.substring(2).trim());
-        } else {
-          if (currentSection.content) {
-            currentSection.content += "\n" + line;
-          } else {
-            currentSection.content = line;
-          }
-        }
-      } else {
-        currentSection = {
-          type: "greeting",
-          title: "บทวิเคราะห์พอร์ตโฟลิโอ",
-          emoji: "🌱",
-          content: line,
-          items: []
-        };
-      }
-    }
-  }
-  
-  if (currentSection) {
-    sections.push(currentSection);
-  }
-  
-  return sections;
-}
-
-function renderParsedBrief(text: string) {
-  const sections = parseDailyBrief(text);
-  if (sections.length === 0) return null;
-
-  const SectionIcon = {
-    greeting: Sprout,
-    focus: Target,
-    finance: TrendingUp,
-    notes: Lightbulb,
-  };
-
-  interface ThemeConfig {
-    iconBg: string;
-    border?: string;
-    bullet?: string;
-    cardBg?: string;
-  }
-
-  const SectionTheme: Record<BriefSection["type"], ThemeConfig> = {
-    greeting: {
-      iconBg: "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20",
-      border: "border-emerald-400/30 bg-emerald-500/5",
-    },
-    focus: {
-      iconBg: "bg-indigo-500/10 text-indigo-600 border border-indigo-500/20",
-      bullet: "bg-indigo-500/60",
-    },
-    finance: {
-      iconBg: "bg-amber-500/10 text-amber-600 border border-amber-500/20",
-      cardBg: "bg-amber-500/5 border-amber-500/15",
-    },
-    notes: {
-      iconBg: "bg-violet-500/10 text-violet-600 border border-violet-500/20",
-      cardBg: "bg-violet-500/5 border-violet-500/15",
-    },
-  };
-  
-  return (
-    <div className="space-y-4">
-      {sections.map((section, idx) => {
-        const Icon = SectionIcon[section.type];
-        const theme = SectionTheme[section.type];
-        return (
-          <div key={idx} className="space-y-2 border-b border-zen-pebble/10 pb-4 last:border-0 last:pb-0">
-            {/* Header */}
-            <div className="flex items-center gap-2">
-              <div className={`p-1 ${theme.iconBg} rounded-lg flex-shrink-0`}>
-                <Icon className="w-3.5 h-3.5" />
-              </div>
-              <h3 className="text-[11px] font-bold text-zen-slate uppercase tracking-wider">
-                {section.title}
-              </h3>
-            </div>
-            
-            {/* Portfolio Analysis Section */}
-            {section.type === "greeting" && section.content && (
-              <div className={`pl-2.5 border-l-2 ${theme.border} py-1.5 px-2.5 rounded-r-xl`}>
-                <p className="text-[12px] text-zen-charcoal font-medium leading-relaxed">
-                  {section.content}
-                </p>
-              </div>
-            )}
-            
-            {/* Risk & News Advice Section */}
-            {section.type === "focus" && (
-              <div className="space-y-1.5 pl-0.5">
-                {section.content && (
-                  <div className="bg-indigo-500/5 border border-indigo-500/10 rounded-xl p-2.5 text-[12px] text-zen-charcoal font-medium leading-relaxed">
-                    {section.content}
-                  </div>
-                )}
-                {section.items.length > 0 &&
-                  section.items.map((item, itemIdx) => (
-                    <div key={itemIdx} className="flex items-start gap-2 text-[12px] text-zen-charcoal font-medium leading-relaxed">
-                      <span className={`w-1.5 h-1.5 rounded-full ${theme.bullet} mt-1.5 flex-shrink-0`} />
-                      <span>{item}</span>
-                    </div>
-                  ))
-                }
-              </div>
-            )}
-            
-            {/* Finance Section */}
-            {section.type === "finance" && (
-              <div className="space-y-2 pl-0.5">
-                {section.content && (
-                  <div className={`${theme.cardBg} border rounded-xl p-3 flex flex-col gap-1`}>
-                    <span className="text-[9px] font-bold text-zen-slate uppercase tracking-wider">
-                      ภาพรวมสินทรัพย์
-                    </span>
-                    <div className="flex flex-wrap items-baseline justify-between gap-1.5 mt-0.5">
-                      <span className="text-[13px] font-bold text-zen-charcoal">
-                        {section.content.split("(")[0]?.replace("พอร์ตรวม:", "").trim()}
-                      </span>
-                      {section.content.includes("(") && (
-                        <span className="text-[10px] font-bold text-zen-pine bg-zen-pine/10 px-2 py-0.5 rounded-full shrink-0">
-                          {section.content.split("(")[1]?.replace(")", "").replace("ผลตอบแทนสะสม:", "").trim()}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
-                
-                {section.items.length > 0 && (
-                  <div className="grid grid-cols-2 gap-2">
-                    {section.items.map((item, itemIdx) => {
-                      const parts = item.split(":");
-                      const titlePart = parts[0]?.trim() || "";
-                      const valuePart = parts[1]?.trim() || "";
-                      
-                      const colorClass = itemIdx === 0
-                        ? "text-emerald-600 bg-emerald-500/5 border-emerald-500/15"
-                        : "text-rose-600 bg-rose-500/5 border-rose-500/15";
-                        
-                      return (
-                        <div key={itemIdx} className={`p-2.5 rounded-xl border text-[11px] font-medium flex flex-col justify-between ${colorClass}`}>
-                          <span className="text-zen-slate text-[9px] uppercase font-bold tracking-wider">
-                            {titlePart}
-                          </span>
-                          <span className="text-zen-charcoal font-bold mt-1 text-[11px] truncate">
-                            {valuePart}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-            
-            {/* Investment Sentiment Section */}
-            {section.type === "notes" && (
-              <div className="space-y-1.5 pl-0.5">
-                {section.content && (
-                  <div className={`${theme.cardBg} border border-violet-500/10 rounded-xl p-2.5 text-[12px] text-zen-charcoal font-medium leading-relaxed`}>
-                    {section.content}
-                  </div>
-                )}
-                {section.items.length > 0 &&
-                  section.items.map((item, itemIdx) => (
-                    <div key={itemIdx} className={`${theme.cardBg} border rounded-xl p-2.5 text-[11.5px] text-zen-charcoal font-medium flex items-start gap-2`}>
-                      <span className="text-violet-500/70 mt-0.5 select-none">✦</span>
-                      <span className="leading-relaxed">{item}</span>
-                    </div>
-                  ))
-                }
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
+// Old parsing code removed - AI summary is now parsed directly from JSON
 
 export default function HomePage() {
-  const { todos, addTodo, toggleTodo, addNote, stocks, notes, usdToThb } = useData();
-  const { aiSummary, isSummarizing, generateSummary } = useAiSummary(todos, stocks, notes, usdToThb);
+  const { todos, addTodo, toggleTodo, addNote, stocks, notes, usdToThb, news } = useData();
+  const { aiSummary, isSummarizing, error: aiError, generateSummary } = useAiSummary(todos, stocks, notes, news, usdToThb);
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => {
+      setCooldown((prev) => prev - 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
+
+  const handleRefreshClick = async () => {
+    if (cooldown > 0 || isSummarizing) return;
+    await generateSummary();
+    setCooldown(30);
+  };
 
   const pendingTodos = todos.filter((todo) => !todo.completed);
   const displayTodos = sortTodos(pendingTodos);
@@ -351,11 +132,16 @@ export default function HomePage() {
             </div>
  
             <button
-              onClick={generateSummary}
-              disabled={isSummarizing || (stocks.length === 0 && notes.length === 0)}
-              className="p-1.5 hover:bg-zen-sand rounded-lg transition-colors cursor-pointer disabled:opacity-30 group"
+              onClick={handleRefreshClick}
+              disabled={isSummarizing || cooldown > 0 || (stocks.length === 0 && notes.length === 0)}
+              className="p-1.5 hover:bg-zen-sand rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group flex items-center gap-1.5"
               aria-label="Refresh AI summary"
             >
+              {cooldown > 0 && (
+                <span className="text-[9px] font-bold text-zen-indigo bg-zen-indigo/10 px-1.5 py-0.5 rounded-lg select-none animate-pulse">
+                  รอ {cooldown}วิ
+                </span>
+              )}
               <RefreshCw
                 className={`w-3.5 h-3.5 text-zen-slate group-hover:text-zen-indigo transition-colors ${
                   isSummarizing ? "animate-spin" : ""
@@ -370,16 +156,162 @@ export default function HomePage() {
               <div className="h-3 bg-zen-sand rounded-full w-full animate-pulse" />
               <div className="h-3 bg-zen-sand rounded-full w-3/4 animate-pulse" />
             </div>
-          ) : (stocks.length === 0 && notes.length === 0) ? (
-            <p className="text-sm leading-relaxed text-zen-slate">
-              ยินดีต้อนรับสู่ Snuze ✦ เพิ่มสินทรัพย์หรือบันทึกด้านล่างเพื่อเริ่มต้น
+          ) : aiError ? (
+            <div className="text-center py-4 px-2">
+              <p className="text-xs text-zen-error font-medium">{aiError}</p>
+              <button
+                onClick={generateSummary}
+                className="mt-3 text-[10px] bg-zen-indigo/10 text-zen-indigo px-3 py-1.5 rounded-xl font-bold hover:bg-zen-indigo/15 active:scale-95 transition-all cursor-pointer"
+              >
+                ลองใหม่อีกครั้ง
+              </button>
+            </div>
+          ) : (stocks.length === 0) ? (
+            <p className="text-sm leading-relaxed text-zen-slate text-center py-2">
+              ยินดีต้อนรับสู่ Snuze ✦ เพิ่มสินทรัพย์เพื่อเริ่มใช้งาน AI วิเคราะห์การลงทุน
             </p>
-          ) : (
+          ) : !aiSummary ? (
             <div className="text-sm leading-relaxed text-zen-charcoal">
-              {aiSummary ? renderParsedBrief(aiSummary) : (
-                <span className="text-zen-slate italic block text-center py-2">
-                  กดรีเฟรชเพื่อให้ AI วิเคราะห์การลงทุนประจำวันของคุณ
-                </span>
+              <span className="text-zen-slate italic block text-center py-2 text-xs">
+                กดปุ่มรีเฟรชด้านบนขวา เพื่อเริ่มวิเคราะห์พอร์ตล่าสุดของคุณด้วย AI
+              </span>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Circular Health Gauge & Analysis */}
+              <div className="flex items-center gap-4 bg-zen-sand/20 rounded-2xl p-4 border border-zen-pebble/10">
+                <div className="relative flex items-center justify-center w-14 h-14 shrink-0">
+                  <svg className="w-full h-full transform -rotate-90">
+                    <circle cx="28" cy="28" r="22" stroke="#E6E6E9" strokeWidth="4.5" fill="transparent" />
+                    <circle 
+                      cx="28" 
+                      cy="28" 
+                      r="22" 
+                      stroke="#5B6B82" 
+                      strokeWidth="4.5" 
+                      fill="transparent"
+                      strokeDasharray="138" 
+                      strokeDashoffset={138 - (138 * Math.min(100, Math.max(0, aiSummary.healthScore || 0))) / 100}
+                      strokeLinecap="round" 
+                      className="transition-all duration-700 ease-out" 
+                    />
+                  </svg>
+                  <span className="absolute text-xs font-bold text-zen-charcoal">{aiSummary.healthScore}</span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span className="text-[9px] font-bold bg-zen-indigo/10 text-zen-indigo px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                    {aiSummary.healthLabel}
+                  </span>
+                  <p className="text-[12px] font-medium text-zen-charcoal/85 mt-2 leading-relaxed">
+                    {aiSummary.portfolioAnalysis}
+                  </p>
+                </div>
+              </div>
+
+              {/* Diversification Alert Banner */}
+              {aiSummary.diversificationAlert && (
+                <div className="bg-zen-warning/10 border border-zen-warning/20 rounded-2xl p-3.5 text-[11px] text-zen-warning font-medium leading-relaxed flex items-start gap-2">
+                  <span className="select-none text-xs">⚠️</span>
+                  <span>{aiSummary.diversificationAlert}</span>
+                </div>
+              )}
+
+              {/* News Impact Mapping */}
+              {aiSummary.newsImpacts && aiSummary.newsImpacts.length > 0 && (
+                <div className="space-y-2 pt-1">
+                  <h3 className="text-[9px] font-bold text-zen-slate uppercase tracking-wider">
+                    ผลกระทบจากข่าวเด่นรอบวัน
+                  </h3>
+                  <div className="grid gap-2">
+                    {aiSummary.newsImpacts.map((item: any, idx: number) => {
+                      const badgeColors = {
+                        bullish: "bg-zen-pine/10 text-zen-pine border-zen-pine/20",
+                        bearish: "bg-zen-error/10 text-zen-error border-zen-error/20",
+                        neutral: "bg-zen-slate/10 text-zen-slate border-zen-slate/20"
+                      };
+                      const dotColors = {
+                        bullish: "bg-zen-pine",
+                        bearish: "bg-zen-error",
+                        neutral: "bg-zen-slate"
+                      };
+                      const impactLabels = {
+                        bullish: "Bullish",
+                        bearish: "Bearish",
+                        neutral: "Neutral"
+                      };
+                      
+                      const impact = item.impact as keyof typeof badgeColors;
+                      const badgeClass = badgeColors[impact] || badgeColors.neutral;
+                      const dotClass = dotColors[impact] || dotColors.neutral;
+                      const labelText = impactLabels[impact] || impactLabels.neutral;
+
+                      return (
+                        <div key={idx} className="bg-zen-white border border-zen-pebble/20 rounded-2xl p-3.5 shadow-sm flex flex-col gap-1.5">
+                          <div className="flex flex-wrap justify-between items-center gap-2">
+                            <span className="text-xs font-bold text-zen-charcoal">{item.symbol}</span>
+                            <span className={`inline-flex items-center gap-1.5 text-[8.5px] font-bold uppercase px-2.5 py-0.5 rounded-full border ${badgeClass}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${dotClass}`} />
+                              {labelText}
+                            </span>
+                          </div>
+                          {item.newsTitle && (
+                            <span className="text-[9.5px] font-semibold text-zen-slate block whitespace-normal leading-normal mt-0.5">
+                              ข่าว: {item.newsTitle}
+                            </span>
+                          )}
+                          <p className="text-[11.5px] text-zen-charcoal font-medium leading-relaxed mt-0.5">
+                            {item.reason}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Strategic Rebalancing Cards */}
+              {aiSummary.actionableRecommendations && aiSummary.actionableRecommendations.length > 0 && (
+                <div className="space-y-2 pt-1">
+                  <h3 className="text-[9px] font-bold text-zen-slate uppercase tracking-wider">
+                    กลยุทธ์ตามราคาตลาดและต้นทุนของคุณ
+                  </h3>
+                  <div className="grid gap-2">
+                    {aiSummary.actionableRecommendations.map((item: any, idx: number) => {
+                      const actionColors = {
+                        buy: "bg-zen-pine/15 text-zen-pine border-zen-pine/25",
+                        sell: "bg-zen-error/15 text-zen-error border-zen-error/25",
+                        hold: "bg-zen-indigo/15 text-zen-indigo border-zen-indigo/25"
+                      };
+                      const actionLabels = {
+                        buy: "ซื้อสะสม",
+                        sell: "พิจารณาขาย",
+                        hold: "ถือครองต่อ"
+                      };
+                      return (
+                        <div key={idx} className="bg-zen-white border border-zen-pebble/20 rounded-2xl p-3.5 shadow-sm flex items-center justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs font-bold text-zen-charcoal">{item.symbol}</span>
+                              <span className={`text-[8.5px] font-bold uppercase px-2 py-0.5 rounded-lg border ${actionColors[item.action as keyof typeof actionColors] || actionColors.hold}`}>
+                                {actionLabels[item.action as keyof typeof actionLabels] || actionLabels.hold}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-zen-slate font-semibold leading-relaxed mt-1.5">
+                              {item.tip}
+                            </p>
+                          </div>
+                          
+                          <Link
+                            href="/assets"
+                            className="px-3.5 py-2.5 bg-zen-sand/40 hover:bg-zen-sand/70 text-zen-indigo text-[10px] font-bold rounded-xl border border-zen-pebble/10 shrink-0 cursor-pointer transition-all active:scale-95 shadow-sm"
+                          >
+                            ซื้อ-ขาย
+                          </Link>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               )}
             </div>
           )}

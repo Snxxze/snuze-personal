@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { Home, CheckSquare, StickyNote, TrendingUp, LucideIcon } from "lucide-react";
+import { Home, Square, FileText, TrendingUp, LucideIcon } from "lucide-react";
 
 interface NavItem {
   path: string;
@@ -13,8 +13,8 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { path: "/", label: "Dashboard", icon: Home },
-  { path: "/todo", label: "Tasks", icon: CheckSquare },
-  { path: "/notes", label: "Notes", icon: StickyNote },
+  { path: "/todo", label: "Tasks", icon: Square },
+  { path: "/notes", label: "Notes", icon: FileText },
   { path: "/assets", label: "Assets", icon: TrendingUp },
 ]
 
@@ -52,10 +52,15 @@ export default function BottomNav() {
             >
               <motion.div
                 whileTap={{ scale: 0.9 }}
-                className={`z-10 transition-colors duration-200 ${isActive ? "text-zen-indigo" : "text-zen-slate group-hover:text-zen-charcoal"
-                  }`}
+                className={`z-10 transition-colors duration-200 ${
+                  isActive ? "text-zen-indigo" : "text-zen-slate group-hover:text-zen-charcoal"
+                }`}
               >
-                <Icon className="w-5 h-5" />
+                <Icon 
+                  className="w-5 h-5"
+                  fill={isActive && item.label !== "Assets" ? "currentColor" : "none"}
+                  strokeWidth={isActive ? 2.5 : 2} 
+                />
               </motion.div>
 
               <span

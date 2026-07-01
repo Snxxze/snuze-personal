@@ -1,17 +1,49 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { TodoItem, StockItem, NoteItem } from "@/types";
-import { MOCK_NEWS } from "@/lib/mock-data";
+import type { TodoItem, StockItem, NoteItem, NewsItem } from "@/types";
 
-export function useAiSummary(todos: TodoItem[], stocks: StockItem[], notes: NoteItem[], usdToThb: number) {
-  const [aiSummary, setAiSummary] = useState<string>("");
+export interface AiSummaryData {
+  healthScore: number;
+  healthLabel: string;
+  portfolioAnalysis: string;
+  diversificationAlert: string;
+  newsImpacts: {
+    symbol: string;
+    newsTitle: string;
+    impact: "bullish" | "bearish" | "neutral";
+    reason: string;
+  }[];
+  actionableRecommendations: {
+    symbol: string;
+    action: "buy" | "sell" | "hold";
+    tip: string;
+  }[];
+}
+
+export function useAiSummary(todos: TodoItem[], stocks: StockItem[], notes: NoteItem[], news: NewsItem[], usdToThb: number) {
+  const [aiSummary, setAiSummary] = useState<AiSummaryData | null>(null);
   const [isSummarizing, setIsSummarizing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const cached = localStorage.getItem("snuze_ai_summary_cache");
-    if (cached) {
-      setAiSummary(cached);
+    const cachedStr = localStorage.getItem("snuze_ai_summary_cache");
+    if (cachedStr) {
+      try {
+        const cachedObj = JSON.parse(cachedStr);
+        // Check if cache format is valid and within 12 hours (12 * 60 * 60 * 1000 = 43200000 ms)
+        const cacheAge = Date.now() - (cachedObj.timestamp || 0);
+        const isExpired = cacheAge > 12 * 60 * 60 * 1000;
+        
+        if (isExpired) {
+          localStorage.removeItem("snuze_ai_summary_cache");
+          setAiSummary(null);
+        } else {
+          setAiSummary(cachedObj.data);
+        }
+      } catch (err) {
+        localStorage.removeItem("snuze_ai_summary_cache");
+      }
     }
   }, []);
 
@@ -19,11 +51,16 @@ export function useAiSummary(todos: TodoItem[], stocks: StockItem[], notes: Note
     if (todos.length === 0 && stocks.length === 0 && notes.length === 0) return;
     
     setIsSummarizing(true);
+    setError(null);
     
     const stocksWithHoldings = stocks
       .filter((s) => typeof s.shares === "number" && s.shares > 0)
       .map((s) => ({
         symbol: s.symbol,
+        name: s.name || "",
+        shares: s.shares || 0,
+        price: s.price || 0,
+        avgCost: s.avgCost || 0,
         changePct: s.changePct || 0,
       }));
 
@@ -44,15 +81,7 @@ export function useAiSummary(todos: TodoItem[], stocks: StockItem[], notes: Note
     const totalValueYesterday = totalValue - dailyReturnUSD;
     const portfolioDailyChangePct = totalValueYesterday > 0 ? (dailyReturnUSD / totalValueYesterday) * 100 : 0;
 
-    const recentNotes = [...notes]
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, 3)
-      .map((n) => ({
-        title: n.title || "",
-        content: n.content || "",
-      }));
-
-    const news = MOCK_NEWS.map((item) => `- [${item.source}] ${item.title}`).join("\n");
+    const newsText = news.map((item) => `- [${item.source}] ${item.title}`).join("\n");
 
     try {
       const res = await fetch("/api/gemini/summarize", {
@@ -62,8 +91,7 @@ export function useAiSummary(todos: TodoItem[], stocks: StockItem[], notes: Note
         },
         body: JSON.stringify({
           stocksWithHoldings,
-          recentNotes,
-          news,
+          news: newsText,
           portfolioSummary: {
             totalValueUSD: totalValue,
             totalValueTHB: totalValue * usdToThb,
@@ -85,74 +113,27 @@ export function useAiSummary(todos: TodoItem[], stocks: StockItem[], notes: Note
       if (res.ok) {
         const data = await res.json();
         setAiSummary(data.summary);
-        localStorage.setItem("snuze_ai_summary_cache", data.summary);
+        setError(null);
+        
+        const cachePayload = {
+          data: data.summary,
+          timestamp: Date.now()
+        };
+        localStorage.setItem("snuze_ai_summary_cache", JSON.stringify(cachePayload));
       } else {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || "AI Summary API request failed");
+        throw new Error(errorData.message || "การสรุปผลจาก AI ขัดข้อง");
       }
     } catch (err) {
-      setTimeout(() => {
-        const isRateLimit = err instanceof Error && err.message === "rate_limit_exceeded";
-        const suffix = isRateLimit 
-          ? "\n\n*(สรุปข้อมูลออฟไลน์ในเครื่อง — เนื่องจากโควต้า AI ของคุณเกินขีดจำกัด)*" 
-          : "";
-        
-        const portfolioValueTHB = totalValue * usdToThb;
-        const totalProfitLossTHB = totalProfitLoss * usdToThb;
-        const portfolioText = portfolioValueTHB > 0
-          ? `พอร์ตรวม: ฿${Math.round(portfolioValueTHB).toLocaleString()} (ผลตอบแทนสะสม: ${totalProfitLossTHB >= 0 ? "+" : ""}฿${Math.round(totalProfitLossTHB).toLocaleString()}, ${totalProfitLossPct >= 0 ? "+" : ""}${totalProfitLossPct.toFixed(2)}%)`
-          : "ไม่มีข้อมูลมูลค่าพอร์ตการลงทุนในขณะนี้";
-
-        let highlightsText = "- ไม่มีหุ้นที่ถือครองในขณะนี้";
-        if (stocksWithHoldings.length > 0) {
-          const sorted = [...stocksWithHoldings].sort((a, b) => b.changePct - a.changePct);
-          const topG = sorted[0];
-          const topL = sorted[sorted.length - 1];
-          
-          let highlights = "";
-          if (topG) {
-            const label = topG.changePct >= 0 ? "บวกสูงสุด" : "ลบต่ำสุด";
-            highlights += `- ตัวเด่นฝั่ง${label}: ${topG.symbol} ${topG.changePct >= 0 ? "+" : ""}${topG.changePct.toFixed(2)}%\n`;
-          }
-          if (topL && topL.symbol !== topG.symbol) {
-            if (topL.changePct < 0) {
-              highlights += `- ตัวเด่นฝั่งลบสูงสุด: ${topL.symbol} ${topL.changePct.toFixed(2)}%\n`;
-            } else {
-              highlights += `- ตัวเด่นฝั่งลบสูงสุด: ไม่มีหุ้นติดลบในพอร์ตวันนี้\n`;
-            }
-          } else if (stocksWithHoldings.length === 1) {
-            if (topG.changePct >= 0) {
-              highlights += `- ตัวเด่นฝั่งลบสูงสุด: ไม่มีหุ้นติดลบในพอร์ตวันนี้\n`;
-            }
-          }
-          highlightsText = highlights.trim();
-        }
-
-        const noteFocusText = recentNotes.length > 0
-          ? recentNotes.map((n) => `- ${n.title ? n.title + ": " : ""}${n.content.substring(0, 50)}...`).join("\n")
-          : "- ไม่มีบันทึกโน้ตย่อล่าสุด";
-
-        const fallbackText = `🌱 **บทวิเคราะห์พอร์ตโฟลิโอ**
-${portfolioText}
-
-💡 **ประเมินแนวคิดการลงทุน**
-${noteFocusText}
-
-🎯 **การประเมินความเสี่ยงและคำแนะนำ**
-[บทวิเคราะห์ข่าวสารจำลองออฟไลน์] แนะนำติดตามข่าวสารเศรษฐกิจอย่างสม่ำเสมอ โดยเฉพาะประเด็นดอกเบี้ยและนวัตกรรมเทคโนโลยีของบริษัทขนาดใหญ่ เพื่อปรับสมดุลพอร์ตอย่างระมัดระวัง
-
-📈 **ความเคลื่อนไหวรายตัว**
-${highlightsText}${suffix}`;
-
-        setAiSummary(fallbackText);
-        localStorage.setItem("snuze_ai_summary_cache", fallbackText);
-      }, 800);
-      
+      console.error("useAiSummary error:", err);
+      const errMsg = err instanceof Error ? err.message : "ไม่สามารถเชื่อมต่อเครือข่ายได้";
+      setError(errMsg);
+      setAiSummary(null);
+      localStorage.removeItem("snuze_ai_summary_cache");
     } finally {
       setIsSummarizing(false);
     }
   };
 
-  return { aiSummary, isSummarizing, generateSummary };
+  return { aiSummary, isSummarizing, error, generateSummary };
 }
-
