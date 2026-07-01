@@ -25,7 +25,8 @@ export default function TodoPage() {
 
   const completedTodos = todos.filter((t) => t.completed);
   const sortedTodos = sortTodos(todos);
-  const pendingCount = todos.length - completedTodos.length;
+  const pendingTodos = sortedTodos.filter((t) => !t.completed);
+  const pendingCount = pendingTodos.length;
 
   return (
     <motion.div
@@ -70,7 +71,7 @@ export default function TodoPage() {
 
       <div className="flex-1 overflow-y-auto space-y-2.5">
         <SyncStatusBanner error={todosError} onRetry={refetchTodos} />
-        {sortedTodos.length === 0 ? (
+        {pendingTodos.length === 0 ? (
           <EmptyState
             icon={<ClipboardList className="w-6 h-6" />}
             title="ไม่มีงานค้างในขณะนี้"
@@ -83,7 +84,7 @@ export default function TodoPage() {
           />
         ) : (
           <AnimatePresence initial={false}>
-            {sortedTodos.map((todo) => (
+            {pendingTodos.map((todo) => (
               <TodoItem
                 key={todo.id}
                 todo={todo}

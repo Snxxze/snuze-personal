@@ -51,11 +51,7 @@ export async function GET(request: Request) {
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
     if (showHistory) {
-      todos = todos.filter((t) => {
-        if (!t.completed) return false;
-        const completionDate = t.completedAt ? new Date(t.completedAt) : new Date(t.createdAt);
-        return completionDate < sevenDaysAgo;
-      });
+      todos = todos.filter((t) => t.completed);
     } else {
       todos = todos.filter((t) => {
         if (!t.completed) return true;

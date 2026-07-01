@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, History, ClipboardCheck, Trash2 } from "lucide-react";
+import { motion } from "framer-motion";
+import { ArrowLeft, History, ClipboardCheck } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Badge } from "@/components/ui/badge";
 import { getPriorityLabel } from "@/lib/format";
 import type { TodoItem } from "@/types";
 
@@ -17,7 +16,7 @@ export default function TodoHistoryPage() {
   useEffect(() => {
     async function fetchHistory() {
       try {
-        const res = await fetch("/api/sheets?history=true");
+        const res = await fetch("/api/sheets/todos?history=true");
 
         if (res.status === 401) {
           window.location.reload();
@@ -91,7 +90,7 @@ export default function TodoHistoryPage() {
           subtitle={
             <span className="flex items-center gap-1.5">
               <History className="w-3.5 h-3.5 text-zen-indigo" />
-              ประวัติงานที่ทำเสร็จแล้ว (เก่ากว่า 7 วัน)
+              ประวัติงานที่ทำเสร็จแล้ว
             </span>
           }
         />
@@ -117,7 +116,7 @@ export default function TodoHistoryPage() {
           <EmptyState
             icon={<ClipboardCheck className="w-6 h-6" />}
             title="ไม่มีประวัติงานเก่าเก็บ"
-            description="งานที่ทำเสร็จก่อนหน้านี้ไม่เกิน 7 วันจะยังคงแสดงอยู่ที่หน้าหลัก ประวัตินี้ช่วยให้ขนาดเครื่องเร็วขึ้น"
+            description="งานที่คุณทำเสร็จเรียบร้อยแล้วทั้งหมดจะปรากฏในหน้านี้"
           />
         ) : (
           <div className="space-y-2.5">
