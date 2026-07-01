@@ -5,6 +5,7 @@ import { useStocks } from "@/hooks/useStocks";
 import { useTodos } from "@/hooks/useTodos";
 import { useNotes } from "@/hooks/useNotes";
 import { DEFAULT_USD_TO_THB } from "@/lib/constants";
+import type { NewsItem } from "@/types";
 
 type DataContextType = {
   // Exchange Rate
@@ -36,6 +37,11 @@ type DataContextType = {
   updateNote: ReturnType<typeof useNotes>["updateNote"];
   deleteNote: ReturnType<typeof useNotes>["deleteNote"];
   refetchNotes: () => void;
+
+  // News
+  news: NewsItem[];
+  isNewsLoading: boolean;
+  refetchNews: () => void;
 };
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -45,6 +51,33 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const { todos, isLoading: isTodosLoading, error: todosError, addTodo, toggleTodo, updateTodo, deleteTodo, refetch: refetchTodos } = useTodos();
   const { notes, isLoading: isNotesLoading, error: notesError, addNote, updateNote, deleteNote, refetch: refetchNotes } = useNotes();
   const [usdToThb, setUsdToThb] = useState(DEFAULT_USD_TO_THB);
+
+  const [news, setNews] = useState<NewsItem[]>([]);
+  const [isNewsLoading, setIsNewsLoading] = useState(true);
+
+  const stockSymbols = stocks.map((s) => s.symbol).join(",");
+
+  const fetchNews = async () => {
+    setIsNewsLoading(true);
+    try {
+      const queryParams = stockSymbols ? `?symbols=${encodeURIComponent(stockSymbols)}` : "";
+      const res = await fetch(`/api/news${queryParams}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.status === "success" && data.news) {
+          setNews(data.news);
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to fetch real news:", err);
+    } finally {
+      setIsNewsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNews();
+  }, [stockSymbols]);
 
   useEffect(() => {
     let active = true;
@@ -95,6 +128,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         updateNote,
         deleteNote,
         refetchNotes,
+
+        news,
+        isNewsLoading,
+        refetchNews: fetchNews,
       }}
     >
       {children}
