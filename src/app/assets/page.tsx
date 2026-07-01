@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { TrendingUp, Newspaper } from "lucide-react";
+import { TrendingUp, Newspaper, Loader2 } from "lucide-react";
 import { useData } from "@/providers/DataProvider";
-import { MOCK_NEWS } from "@/lib/mock-data";
 
 import { PageHeader } from "@/components/ui/page-header";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -16,7 +15,7 @@ import NewsFeed from "@/components/NewsFeed";
 type ActiveTab = "market" | "news";
 
 export default function AssetsPage() {
-  const { stocks, addStock, deleteStock, stocksError, refetchStocks } = useData();
+  const { stocks, addStock, deleteStock, stocksError, refetchStocks, news, isNewsLoading } = useData();
   const [activeTab, setActiveTab] = useState<ActiveTab>("market");
 
   const segmentOptions = [
@@ -35,7 +34,9 @@ export default function AssetsPage() {
   const subtitle =
     activeTab === "market"
       ? `ติดตาม ${stocks.length} สินทรัพย์`
-      : `${MOCK_NEWS.length} ข่าวล่าสุด`;
+      : isNewsLoading
+        ? "กำลังโหลดข่าวสาร..."
+        : `${news.length} ข่าวล่าสุด`;
 
   return (
     <motion.div
@@ -86,7 +87,14 @@ export default function AssetsPage() {
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.15 }}
             >
-              <NewsFeed news={MOCK_NEWS} />
+              {isNewsLoading ? (
+                <div className="flex flex-col items-center justify-center py-12 text-zen-slate gap-2">
+                  <Loader2 className="w-6 h-6 animate-spin text-zen-indigo" />
+                  <span className="text-xs">กำลังโหลดข่าวสารล่าสุด...</span>
+                </div>
+              ) : (
+                <NewsFeed news={news} />
+              )}
             </motion.div>
           )}
         </AnimatePresence>
